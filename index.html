@@ -44,6 +44,7 @@ select:focus{border-color:var(--amber)}
 .st{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--head);margin-bottom:12px;display:flex;align-items:center;gap:7px}
 .stbar{width:3px;height:15px;background:var(--amber);border-radius:2px;flex-shrink:0}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g2>*{min-width:0}
 .gf{margin-bottom:14px}
 @media(max-width:860px){.g2{grid-template-columns:1fr}}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:15px}
@@ -70,6 +71,9 @@ tfoot td{background:var(--surface);font-weight:700;border-top:2px solid var(--bo
 .barchart{display:flex;align-items:flex-end;gap:3px;height:190px}
 .bgroup{flex:1;display:flex;flex-direction:column;align-items:center}
 .bpair{display:flex;align-items:flex-end;gap:2px;height:165px;position:relative}
+.chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.chart-scroll .barchart{min-width:max-content}
+.chart-scroll .bgroup{flex:0 0 auto;min-width:50px}
 .bar{border-radius:4px 4px 0 0;min-width:16px;width:16px;transition:height .5s ease;position:relative}
 .bar-label{font-size:9px;font-weight:700;margin-bottom:3px;white-space:nowrap}
 .blabel{font-size:10px;color:#94a3b8;margin-top:5px;text-align:center;white-space:nowrap}
@@ -234,10 +238,6 @@ tfoot td{background:var(--surface);font-weight:700;border-top:2px solid var(--bo
   .login-btn{padding:12px;font-size:13px}
   .login-footer{font-size:9.5px;margin-top:14px}
 
-  /* Scrollable bar charts */
-  .chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
-  .chart-scroll .barchart{min-width:max-content}
-  .chart-scroll .bgroup{flex:0 0 auto;min-width:50px}
 }
 
 /* ── Tablet 860px ─────────────────────────────────────────── */
@@ -784,14 +784,15 @@ function ovR(){
         '<span><span style="display:inline-block;width:10px;height:10px;background:var(--blue);border-radius:2px;margin-right:4px"></span>Actual</span>'+
         '<span><span style="display:inline-block;width:10px;height:10px;background:#4b5563;border-radius:2px;margin-right:4px"></span>PY</span></div></div>'+
       '<div class="card gf"><div class="st"><div class="stbar"></div>Project Flag Status</div>'+
+        '<div style="max-height:320px;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch">'+
         D.projects.map(function(p){
           var pd=flt(month,p),t=sum(pd,'target'),a=sum(pd,'actual'),p2=pct(a,t);
-          return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">'+
+          return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);min-width:360px">'+
             '<span style="min-width:110px;font-weight:600;font-size:12px">'+p+'</span>'+
-            '<div style="flex:1">'+pb(p2)+'</div>'+
+            '<div style="flex:1;min-width:80px">'+pb(p2)+'</div>'+
             '<span style="min-width:65px;text-align:right">'+flag(p2)+'</span>'+
             '<span style="min-width:80px;text-align:right;font-size:11px;color:var(--muted)">'+cr(a)+'/'+cr(t)+'</span></div>';
-        }).join('')+'</div></div>'+
+        }).join('')+'</div></div></div>'+
     '<div class="card gf"><div class="st"><div class="stbar"></div>Achievement Heatmap</div>'+
     '<div style="overflow-x:auto"><div style="display:table;width:100%;min-width:100%">'+
     '<div style="display:flex;gap:4px;margin-bottom:5px;align-items:center;width:100%">'+
@@ -819,13 +820,13 @@ function monthBarChart(project){
   var maxV=Math.max.apply(null,vals.map(function(v){return Math.max(v.t,v.a,v.py);}));
   if(maxV<=0)maxV=1;
   var H=160;
-  return '<div class="chart-scroll"><div class="barchart" style="height:'+(H+30)+'px;align-items:flex-end">'+vals.map(function(v){
+  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px"><div style="display:flex;align-items:flex-end;gap:3px;min-width:max-content;height:'+(H+30)+'px">'+vals.map(function(v){
     var ht=Math.max(v.t>0?Math.round(v.t/maxV*H):0,2),ha=Math.max(v.a>0?Math.round(v.a/maxV*H):0,2),hp=Math.max(v.py>0?Math.round(v.py/maxV*H):0,2);
     var tLabel=v.t>0?v.t.toFixed(1):'';
     var aLabel=v.a>0?v.a.toFixed(1):'';
     var pyLabel=v.py>0?v.py.toFixed(1):'';
-    return '<div class="bgroup" style="align-items:center;min-width:54px">'+
-      '<div class="bpair" style="height:'+H+'px;align-items:flex-end;gap:3px">'+
+    return '<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:54px">'+
+      '<div style="display:flex;align-items:flex-end;gap:2px;height:'+H+'px;position:relative">'+
       (v.t>0?'<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
         '<div style="font-size:8.5px;color:var(--amber);font-weight:700;margin-bottom:2px;white-space:nowrap">'+tLabel+'</div>'+
         '<div style="height:'+ht+'px;width:14px;background:var(--amber);opacity:.85;border-radius:3px 3px 0 0" title="'+v.m+' Target: '+v.t.toFixed(2)+'Cr"></div></div>':'<div style="width:14px"></div>')+
@@ -1269,7 +1270,7 @@ function invR(){
       var sp=pct(r.sold,r.total||1);
       var ap=pct(r.available,r.total||1);
       var statusLabel=r.available===0?'<span class="flag rd">Sold Out</span>':r.available<5?'<span class="flag yw">Low Stock</span>':'<span class="flag gr">Available</span>';
-      var barColor=sp>=80?'var(--green)':sp>=50?'var(--amber)':'var(--blue)';
+      var barColor=sp>=80?'var(--green)':sp>=50?'var(--amber)':'var(--red)';
       return '<tr>'+
         '<td class="tl">'+r.project+'</td>'+
         '<td style="font-weight:600">'+r.total+'</td>'+
