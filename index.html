@@ -943,7 +943,7 @@ function prR(){
       '<div class="tw"><table>'+
       '<thead><tr><th>Month</th><th>FY26 PY Actual</th><th>FY27 Target</th><th>FY27 Actual</th><th>% Ach</th><th>Shortfall</th><th>vs PY</th></tr></thead>'+
       '<tbody>'+rows+'</tbody>'+
-      '<tfoot><tr><td class="tl">TOTAL</td><td style="color:#8b5cf6">'+cr(pyTot)+'Cr</td><td style="color:var(--amber)">'+cr(totT)+'Cr</td><td style="color:var(--blue)">'+cr(totA)+'Cr</td><td>'+flag(totP)+'</td><td style="color:var(--red)">'+(totT>totA?cr(totT-totA)+'Cr':'<span style="color:var(--green)">✓</span>')+'</td><td></td></tr></tfoot>'+
+      '<tfoot><tr><td class="tl">TOTAL</td><td style="color:#8b5cf6">'+cr(pyTot)+'Cr</td><td style="color:var(--amber)">'+cr(totT)+'Cr</td><td style="color:var(--blue)">'+cr(totA)+'Cr</td><td>'+flag(totP)+'</td><td style="color:var(--red)">'+(totT>totA?cr(totT-totA)+'Cr':'<span style="color:var(--green)">✓</span>')+'</td><td>'+(pyTot>0&&totA>0?(function(){var g=Math.round((totA-pyTot)/pyTot*100);return '<span style="color:'+(g>=0?'var(--green)':'var(--red)')+'">vs PY '+(g>=0?'▲':'▼')+Math.abs(g)+'%</span>';})():'—')+'</td></tr></tfoot>'+
       '</table></div></div>';
   }
 
@@ -980,7 +980,7 @@ function prR(){
       '<div class="tw"><table>'+
       '<thead><tr><th>Month</th><th>FY26 PY Actual</th><th>FY27 Target</th><th>FY27 Actual</th><th>% Ach</th><th>Shortfall</th><th>vs PY</th></tr></thead>'+
       '<tbody>'+rows+'</tbody>'+
-      '<tfoot><tr><td class="tl">TOTAL</td><td style="color:#8b5cf6">'+cr(pyTot)+'Cr</td><td style="color:var(--amber)">'+cr(totT)+'Cr</td><td style="color:var(--blue)">'+cr(totA)+'Cr</td><td>'+flag(totP)+'</td><td style="color:var(--red)">'+(totT>totA?cr(totT-totA)+'Cr':'<span style="color:var(--green)">✓</span>')+'</td><td></td></tr></tfoot>'+
+      '<tfoot><tr><td class="tl">TOTAL</td><td style="color:#8b5cf6">'+cr(pyTot)+'Cr</td><td style="color:var(--amber)">'+cr(totT)+'Cr</td><td style="color:var(--blue)">'+cr(totA)+'Cr</td><td>'+flag(totP)+'</td><td style="color:var(--red)">'+(totT>totA?cr(totT-totA)+'Cr':'<span style="color:var(--green)">✓</span>')+'</td><td>'+(pyTot>0&&totA>0?(function(){var g=Math.round((totA-pyTot)/pyTot*100);return '<span style="color:'+(g>=0?'var(--green)':'var(--red)')+'">vs PY '+(g>=0?'▲':'▼')+Math.abs(g)+'%</span>';})():'—')+'</td></tr></tfoot>'+
       '</table></div></div>';
   } else {
     var projs=Array.isArray(project)?project:[project];
