@@ -869,6 +869,10 @@ function ovR(){
     D.projects.map(function(p){
       var cells=D.months.map(function(m){
         var d=flt(m,p),t=sum(d,'target'),a=sum(d,'actual');
+        var nowMonth=new Date().toLocaleString('en-US',{month:'long'});
+        var nowIdx=MONTH_ORDER.indexOf(nowMonth),mIdx=MONTH_ORDER.indexOf(m);
+        var isFuture=mIdx>nowIdx;
+        if(isFuture)return '<div class="hcell" style="background:#1e2a3a;color:#334155">'+pct(a,t)+'%</div>';
         if(!t&&!a)return '<div class="hcell" style="background:#0f1e33;color:var(--muted)">—</div>';
         var p2=pct(a,t),bg=p2>=80?'#10b98128':p2>=50?'#f59e0b28':'#ef444428',fc=p2>=80?'var(--green)':p2>=50?'var(--amber)':'var(--red)';
         return '<div class="hcell" style="background:'+bg+';color:'+fc+'" title="'+m+': T='+t.toFixed(1)+' A='+a.toFixed(1)+'">'+p2+'%</div>';
@@ -910,7 +914,19 @@ function monthBarChart(project){
 // ── PROJECTS ──
 function prR(){
   var project=getMS('pr_proj'),month=getMS('pr_month');
+  var quarter=sel('pr_quarter')||'all';
   var pColors=['var(--amber)','var(--blue)','var(--green)','var(--purple)','var(--cyan)','var(--red)','#6366f1'];
+
+  var QMAP={Q1:['April','May','June'],Q2:['July','August','September'],Q3:['October','November','December'],Q4:['January','February','March']};
+  var QPREV={
+    Q1:{label:'Q4 FY 25-26',months:['January','February','March'],isPY:true},
+    Q2:{label:'Q1',months:['April','May','June'],isPY:false},
+    Q3:{label:'Q2',months:['July','August','September'],isPY:false},
+    Q4:{label:'Q3',months:['October','November','December'],isPY:false}
+  };
+
+  // Quarter filter overrides month filter
+  if(quarter!=='all') month=QMAP[quarter];
 
   function buildProjectCard(p,pi,color){
     var months=month==='all'?D.months:(Array.isArray(month)?month:[month]);
@@ -987,11 +1003,44 @@ function prR(){
     content=projs.map(function(p,pi){return buildProjectCard(p,pi,pColors[pi%pColors.length]);}).join('');
   }
 
+  // ── Quarter comparison summary card ──
+  var qCard='';
+  if(quarter!=='all'){
+    var pq=QPREV[quarter];
+    var qT=sum(flt(QMAP[quarter],project),'target');
+    var qA=sum(flt(QMAP[quarter],project),'actual');
+    var qP=pct(qA,qT);
+    var pqA=pq.isPY
+      ? pq.months.reduce(function(s,m){return s+pyFor(m,project);},0)
+      : sum(flt(pq.months,project),'actual');
+    var qvq=pqA>0?Math.round((qA-pqA)/pqA*100):null;
+    var qoqKpi=qvq!==null
+      ? kpi('QoQ Change',(qvq>=0?'▲':'▼')+Math.abs(qvq)+'%',qA>=pqA?'Ahead of prev qtr':'Behind prev qtr',qA>=pqA?'var(--green)':'var(--red)')
+      : kpi('QoQ Change','—','No prev data','var(--muted)');
+    qCard='<div class="card gf" style="border-top:2px solid var(--purple);margin-bottom:14px">'+
+      '<div class="st"><div class="stbar"></div>'+quarter+' Summary &nbsp;<span style="font-size:11px;color:var(--muted);font-family:Outfit,sans-serif;font-weight:400">vs '+pq.label+(pq.isPY?' (Prev FY)':' (This FY)')+'</span></div>'+
+      '<div class="krow">'+
+        kpi(quarter+' Target',cr(qT)+'Cr',QMAP[quarter].join(' · '),'var(--amber)')+
+        kpi(quarter+' Actual',cr(qA)+'Cr',qP+'% achieved',qP>=80?'var(--green)':qP>=50?'var(--amber)':'var(--red)')+
+        kpi('Shortfall / Excess',qT>qA?cr(qT-qA)+'Cr shortfall':cr(qA-qT)+'Cr excess',qA>=qT?'Target met ✓':'Gap remaining',qA>=qT?'var(--green)':'var(--red)')+
+        kpi(pq.label+' Actual',pqA>0?cr(pqA)+'Cr':'—',pq.isPY?'FY 25-26 Q4':'FY 26-27 actual','var(--purple)')+
+        qoqKpi+
+      '</div></div>';
+  }
+
   document.getElementById('page-projects').innerHTML=
     '<div class="fbar"><label>Project</label>'+buildMS('pr_proj','project','prR')+
-    '<label>Month</label>'+buildMS('pr_month','month','prR')+'</div>'+
-    content;
+    (quarter==='all'?'<label>Month</label>'+buildMS('pr_month','month','prR'):'')+
+    '<label>Quarter</label><select id="pr_quarter" onchange="prR()">'+
+      '<option value="all">All Quarters</option>'+
+      '<option value="Q1">Q1 (Apr – Jun)</option>'+
+      '<option value="Q2">Q2 (Jul – Sep)</option>'+
+      '<option value="Q3">Q3 (Oct – Dec)</option>'+
+      '<option value="Q4">Q4 (Jan – Mar)</option>'+
+    '</select></div>'+
+    qCard+content;
   buildFilters();
+  var qEl=document.getElementById('pr_quarter');if(qEl&&quarter!=='all')qEl.value=quarter;
 }
 
 // ── STM ──
@@ -1002,7 +1051,7 @@ function stmR(){
   var totT=sum(data,'target'),totA=sum(data,'actual');
   var tableRows=Object.entries(groupBy(flt(month,project,type),'stm')).filter(function(e){return e[1].some(function(r){return r.target>0||r.actual>0;});}).map(function(e){
     var stm=e[0],rows=e[1],t=sum(rows,'target'),a=sum(rows,'actual'),p2=pct(a,t),stype=rows[0].type;
-    var projs=[...new Set(rows.map(function(r){return r.project;}))].join(', ');
+    var projs=[...new Set(rows.filter(function(r){return r.actual>0;}).map(function(r){return r.project;}))].join(', ')||'—';
     var bg=a>0?(p2>=80?'#10b98108':p2>=50?'#f59e0b08':'#ef444408'):'';
     return '<tr style="background:'+bg+'">'+
       '<td class="tl">'+stm+'</td><td style="font-size:11px;color:var(--muted)">'+projs+'</td>'+
@@ -1015,8 +1064,7 @@ function stmR(){
     '<div class="fbar"><label>Project</label>'+buildMS('stm_proj','project','stmR')+
     '<label>Month</label>'+buildMS('stm_month','month','stmR')+
     '<label>Type</label><select id="stm_type" onchange="stmR()"><option value="all">All</option><option value="Direct">Direct</option><option value="CP">CP</option></select></div>'+
-    '<div class="g2 gf">'+
-    '<div class="card"><div class="st"><div class="stbar"></div>STM Performance</div>'+
+    '<div class="card gf"><div class="st"><div class="stbar"></div>STM Performance</div>'+
     (bySTM.length?bySTM.map(function(s){
       var p2=pct(s.a,s.t),tc=s.type==='CP'?'var(--blue)':'var(--green)';
       return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">'+
@@ -1026,22 +1074,6 @@ function stmR(){
         flag(p2)+'</div>';
     }).join(''):'<div style="color:var(--muted);padding:20px;text-align:center">No data for selected filters</div>')+
     '</div>'+
-    '<div class="card"><div class="st"><div class="stbar"></div>Target vs Actual Bars</div>'+
-    '<div class="chart-scroll"><div class="barchart">'+
-    (bySTM.length?bySTM.map(function(s){
-      var ht=Math.round(s.t/maxV*90),ha=Math.round(s.a/maxV*90);
-      return '<div class="bgroup" style="min-width:50px"><div class="bpair">'+
-        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
-          '<div class="bar-label" style="color:var(--amber)">'+cr(s.t)+'Cr</div>'+
-          '<div class="bar" style="height:'+ht+'px;background:var(--amber);opacity:.7" title="'+s.stm+' Target: '+s.t.toFixed(2)+'Cr"></div>'+ 
-        '</div>'+ 
-        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
-          '<div class="bar-label" style="color:var(--blue)">'+cr(s.a)+'Cr</div>'+ 
-          '<div class="bar" style="height:'+ha+'px;background:var(--blue)" title="'+s.stm+' Actual: '+s.a.toFixed(2)+'Cr"></div>'+ 
-        '</div>'+ 
-        '</div><div class="blabel">'+s.stm.split(' ')[0]+'</div></div>';
-    }).join(''):'<div style="color:var(--muted);margin:auto">No data</div>')+
-    '</div></div></div></div>'+
     '<div class="card gf"><div class="st"><div class="stbar"></div>Full STM Table</div>'+
     '<div class="tw"><table>'+
     '<thead><tr><th>STM</th><th>Projects</th><th>Type</th><th>Target</th><th>Actual</th><th>% Ach</th><th>Shortfall</th></tr></thead>'+
@@ -1218,7 +1250,7 @@ function mktR(){
     '<div class="g2">'+
     '<div class="card gf"><div class="st"><div class="stbar"></div>Marketing Funnel</div>'+
     steps.map(function(s){
-      var tW=Math.round(s.t/maxF*100),aW=Math.round(s.a/maxF*100),p2=pct(s.a,s.t);
+      var ownMax=Math.max(s.t,s.a)||1,tW=Math.round(s.t/ownMax*100),aW=Math.round(s.a/ownMax*100),p2=pct(s.a,s.t);
       return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
         '<div style="min-width:110px;font-size:12px;font-weight:500">'+s.l+'</div>'+
         '<div style="flex:1;position:relative;height:16px;background:var(--border);border-radius:8px;overflow:hidden">'+
